@@ -1,0 +1,2 @@
+class LightStashError(Exception):
+    pass

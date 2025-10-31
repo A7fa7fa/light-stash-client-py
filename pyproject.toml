@@ -1,0 +1,26 @@
+[project]
+name = "light-stash-client-py"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+]
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "poethepoet>=0.37.0",
+    "ruff>=0.14.2",
+]
+
+
+[tool.poe.tasks]
+venv="uv venv --clear"
+init="uv sync --all-groups"
+add_dev="uv add --dev"
+add="uv add"
+lint="uv run ruff check src"
+lint_fix="uv run ruff check src --fix"
+format="uv run ruff format src"
+check="mypy src --strict"
