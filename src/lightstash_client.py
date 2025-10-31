@@ -22,7 +22,7 @@ class TlvParser:
             return tlv
 
         if tlv_type == TlvTypes.INT64:
-            assert len(value) == 8 and "int should by 64bit"
+            assert len(value) == 8, "int should be 64bit"
             tlv = b""
             tlv += tlv_type.value.to_bytes(length=1, byteorder="big", signed=False)
             tlv += value
@@ -43,11 +43,12 @@ class TlvParser:
         tlv_type = int.from_bytes(
             bytes=data[offset : offset + 1], byteorder="big", signed=False
         )
+        type_enum = TlvTypes(tlv_type)
 
-        if tlv_type == 0:
+        if type_enum == TlvTypes.NIL:
             return TlvTypes.NIL, None, offset + 1
 
-        if tlv_type == 1:
+        if type_enum == TlvTypes.ERR:
             error_code = int.from_bytes(
                 bytes=data[offset + 1 : offset + 5], byteorder="big", signed=False
             )
@@ -64,7 +65,7 @@ class TlvParser:
                 offset + 5 + 4 + payload_size,
             )
 
-        if tlv_type == 2:
+        if type_enum == TlvTypes.STR:
             payload_size = int.from_bytes(
                 bytes=data[offset + 1 : offset + 5], byteorder="big", signed=False
             )
@@ -73,13 +74,13 @@ class TlvParser:
             )
             return TlvTypes.STR, payload, offset + 5 + payload_size
 
-        if tlv_type == 3:
+        if type_enum == TlvTypes.INT64:
             payload = int.from_bytes(
                 bytes=data[offset + 1 : offset + 9], byteorder="big", signed=True
             )
             return TlvTypes.INT64, payload, offset + 9
 
-        if tlv_type == 4:
+        if type_enum == TlvTypes.ARR:
             raise LightStashError("Arr not implemented")
 
         raise LightStashError("Not implemented")
@@ -148,8 +149,18 @@ class LightStashClient:
     def _read_from_socket(self, num_bytes: int) -> bytes:
         if self.sock is None:
             raise LightStashError("Sock dead")
-        data = self.sock.recv(num_bytes)
-        return data
+        chunks: list[bytes] = []  # TODO bytarray as buffer
+        recv_bytes = 0
+        while True:
+            chunk = self.sock.recv(num_bytes - recv_bytes)
+            if chunk is None:
+                raise LightStashError("Connection closed while reading")
+            recv_bytes += len(chunk)
+            chunks.append(chunk)
+            if recv_bytes == num_bytes:
+                break
+
+        return b"".join(chunks)
 
     def _recv_response_header(self) -> tuple[int, int]:
         header_raw = self._read_from_socket(8)
@@ -162,7 +173,7 @@ class LightStashClient:
         if status != 1:
             print(f"Error response - status not ok {status}")
 
-        response_raw = self._read_from_socket(size)
+        response_raw = self._read_from_socket(size - 4)
 
         result: list[tuple[TlvTypes, Any]] = []
         offset = 0
@@ -227,7 +238,7 @@ class LightStashClient:
         ):
             return tlv_value
 
-        if tlv_value == TlvTypes.ERR:
+        if tlv_type == TlvTypes.ERR:
             return None
 
         raise LightStashError("not implemented")

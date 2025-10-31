@@ -32,3 +32,4 @@ TODO:
 - async with connection pooling
 - pipeling multiple requests
 - error handling
+- logging

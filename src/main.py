@@ -6,7 +6,7 @@ with LightStashConnectionPool(
     max_connections=1,
     idle_timeout=300,
     use_tls=True,
-    cafile="../certs/cert.pem",
+    cafile="../light-stash/certs/cert.pem",
     sock_timeout=300,
 ) as pool:
     with pool.connection() as conn:
